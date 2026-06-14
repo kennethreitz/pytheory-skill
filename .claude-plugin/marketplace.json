@@ -6,13 +6,10 @@
   },
   "description": "PyTheory's official Claude Code plugins — compose music from natural language.",
   "version": "0.51.0",
-  "metadata": {
-    "pluginRoot": "./plugins"
-  },
   "plugins": [
     {
       "name": "composing-with-pytheory",
-      "source": "composing-with-pytheory",
+      "source": "./plugins/composing-with-pytheory",
       "description": "Compose music with PyTheory — progressions, melodies, drums, and full arrangements rendered to audio or MIDI from pure Python.",
       "author": { "name": "Kenneth Reitz" },
       "homepage": "https://pytheory.org",
