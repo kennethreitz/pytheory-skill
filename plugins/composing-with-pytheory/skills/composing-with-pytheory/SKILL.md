@@ -125,8 +125,14 @@ Effects are part kwargs (set once at creation, or change later with `.set()`):
 | Mix glue | `sidechain` (0..0.5 duck by the kick), `sidechain_release`, `humanize` |
 
 **`reverb_type`** picks a convolution space: `"algorithmic"` (default),
-`"taj_mahal"`, `"cathedral"`, `"plate"`, `"spring"`, `"cave"`,
+`"taj_mahal"`, `"cathedral"`, `"hall"`, `"plate"`, `"spring"`, `"cave"`,
 `"parking_garage"`, `"canyon"`.
+
+**`score.ring_out()`** appends trailing silence so reverb/delay tails decay
+naturally instead of being clipped at the last beat (most audible on a final
+drum hit with a long reverb). Call it once before playing or exporting; the
+length auto-sizes to the longest effect tail, or pass `ring_out(seconds)`.
+Skip it for seamless loops, where you *want* the hard cut.
 
 ```python
 pad  = score.part("pad", synth="supersaw", envelope="pad", reverb=0.5,
@@ -229,13 +235,12 @@ and historical-tuning work.
 ## Hearing it & exporting
 
 ```python
-from pytheory.play import play_score, render_score, SAMPLE_RATE
-import scipy.io.wavfile
+from pytheory.play import play_score
 
 play_score(score)                       # play through the speakers
 
-buf = render_score(score)               # float32 (N, 2) buffer, no audio device needed
-scipy.io.wavfile.write("song.wav", SAMPLE_RATE, buf)
+buf = score.render()                    # float32 (N, 2) buffer, no audio device needed
+score.to_wav("song.wav")                # render + save a 16-bit stereo WAV
 
 score.save_midi("song.mid")             # MIDI (drums on channel 10)
 open("song.abc", "w").write(score.to_abc(title="Song", key="G"))
@@ -244,8 +249,8 @@ open("song.ly",  "w").write(score.to_lilypond(title="Song", key="G"))
 print(score.to_tab("guitar_part"))      # ASCII tab for a part
 ```
 
-In a headless/CI context (no speakers), prefer `render_score` + WAV over
-`play_score`.
+In a headless/CI context (no speakers), prefer `score.render()` /
+`score.to_wav()` over `play_score`.
 
 ## Metronome, practice click & tempo trainer
 

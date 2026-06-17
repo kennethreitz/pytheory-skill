@@ -5,7 +5,7 @@
     "email": "me@kennethreitz.org"
   },
   "description": "PyTheory's official Claude Code plugins — compose music from natural language.",
-  "version": "0.53.1",
+  "version": "0.54.0",
   "plugins": [
     {
       "name": "composing-with-pytheory",

@@ -53,6 +53,56 @@ chords = [Chord.from_symbol(s) for s in ["C", "G", "Am", "F"]]
 analyze_progression(chords, key="C", mode="major")        # ['I', 'V', 'vi', 'IV']
 ```
 
+**Secondary dominants** — applied dominants that tonicise a non-tonic
+degree. `detect_secondary_dominant` *identifies* one chord (the analytical
+inverse of `Key.secondary_dominant(degree)`, which *builds* one); pass
+`secondary_dominants=True` to `analyze_progression` to label them in
+context (instead of the bare degree):
+
+```python
+from pytheory import detect_secondary_dominant, analyze_progression, Chord
+detect_secondary_dominant(Chord.from_symbol("D7"), "C")   # 'V7/V'  (D7 -> G)
+detect_secondary_dominant(Chord.from_symbol("E7"), "C")   # 'V7/vi' (E7 -> Am)
+prog = [Chord.from_symbol(s) for s in ("C", "D7", "G7", "C")]
+analyze_progression(prog, "C", secondary_dominants=True)  # ['I', 'V7/V', 'V7', 'I']
+```
+
+From the terminal, `pytheory analyze C D7 G7 C` prints the whole picture —
+detected key, Roman numerals (with secondary dominants), and cadences
+(add `--key`/`--mode` to fix the key).
+
+**Cadences** — the harmonic punctuation that ends a phrase. Pass the last
+two chords (and the key) to `detect_cadence`, or scan a whole progression
+with `find_cadences`:
+
+```python
+from pytheory import detect_cadence, find_cadences, Chord
+C = Chord.from_name
+
+detect_cadence(C("G"), C("C"), "C")            # 'imperfect authentic' (5th on top)
+detect_cadence(C("G"), C("Am"), "C")           # 'deceptive'  (V->vi surprise)
+detect_cadence(C("F"), C("C"), "C")            # 'plagal'     (the 'Amen')
+detect_cadence(C("Dm"), C("G"), "C")           # 'half'       (ends on V)
+detect_cadence(C("E"), C("Am"), "A", "minor")  # 'imperfect authentic'
+
+# Perfect authentic needs the tonic in the soprano (both root position):
+pac_I = Chord.from_midi_message(48, 52, 55, 60)   # C3 E3 G3 C4
+detect_cadence(C("G"), pac_I, "C")             # 'perfect authentic'
+
+find_cadences([C(n) for n in ("C","F","G","Am")], "C")   # [(2,'half'), (3,'deceptive')]
+```
+
+**Non-chord tones** — label the melody notes that *aren't* in the harmony
+(passing / neighbor / suspension / anticipation / appoggiatura / escape).
+Pass one chord for the whole line, or one chord per note:
+
+```python
+from pytheory import analyze_non_chord_tones, Chord, Tone
+mel = [Tone.from_string(n) for n in ("C4","D4","E4")]
+[r["type"] for r in analyze_non_chord_tones(mel, Chord.from_name("C"))]
+# ['chord tone', 'passing', 'chord tone']
+```
+
 ## Harmonic color & motion
 
 ```python

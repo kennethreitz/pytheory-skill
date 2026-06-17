@@ -61,6 +61,25 @@ c.dissonance           # 5.33  (a roughness number; higher = more dissonant)
 c.beat_frequencies     # [(Tone, Tone, hz), …]  beating between pairs in ET
 ```
 
+### Pitch-class-set toolkit
+
+```python
+c = Chord.from_symbol("Cmaj7")
+
+c.normal_form          # (11, 0, 4, 7)   most compact ordering
+c.prime_form           # (0, 1, 5, 8)    canonical set-class form
+c.interval_vector      # (1, 0, 1, 2, 2, 0)  interval-class content <ic1..ic6>
+c.complement           # Chord of the other 8 pitch classes
+
+# Set-class relationships between two chords:
+Chord.from_symbol("C").is_transposition_of(Chord.from_symbol("G"))   # True (Tn)
+Chord.from_symbol("C").is_set_class_equivalent(Chord.from_symbol("Cm"))  # True (TnI: maj/min)
+Chord.from_symbol("C").is_subset_of(Chord.from_symbol("Cmaj7"))      # True
+# Z-relation — same interval vector, different set class (e.g. 4-z15 / 4-z29):
+a, b = Chord.from_midi_message(0,1,4,6), Chord.from_midi_message(0,1,3,7)
+a.is_z_related(b)      # True
+```
+
 ## Reharmonization & voice leading
 
 ```python
@@ -72,12 +91,75 @@ Chord.from_symbol("G7").negative_harmony("C")              # the negative domina
 # (Key("C","major").negative_harmony() gives the axis, hinge notes, and bridge
 #  chord — that's the keys-and-harmony skill.)
 
+# Reharmonization ideas for a chord in a key (tritone sub, diatonic subs,
+# secondary dominant, negative harmony) — one dict per suggestion:
+from pytheory import reharmonize
+for s in reharmonize(Chord.from_symbol("G7"), "C"):
+    print(s["technique"], "->", s["chord"].identify())
+# Or from the shell: pytheory reharmonize G7 --key C   (--json / --play too)
+
+# Reharmonize a whole progression (techniques: secondary_dominants/tritone/diatonic):
+from pytheory import reharmonize_progression
+prog = [Chord.from_symbol(s) for s in ("C","Am","Dm","G7","C")]
+[c.symbol for c in reharmonize_progression(prog, "C", technique="secondary_dominants")]
+# ['C','E7','Am','A7','Dm','D7','G7','C']  — the cycle-of-dominants reharm
+
 # Smoothest motion from one chord to the next, voice by voice:
 for frm, to, semis in Chord.from_symbol("Cmaj7").voice_leading(Chord.from_symbol("Fmaj7")):
     print(frm, "->", to, f"({semis:+d} semitones)")
 ```
 
-## Hear a chord
+### Neo-Riemannian (P/L/R) — chromatic triad moves
+
+The P/L/R transformations move a single voice to flip a major/minor triad
+into another — the engine behind Tonnetz harmony and a lot of film-score
+chromaticism. Each is its own inverse; together they reach all 24 triads.
+
+```python
+C = Chord.from_symbol("C")
+C.parallel().identify()              # 'C minor'  (P: same root, flip quality)
+C.relative().identify()              # 'A minor'  (R: relative)
+C.leading_tone_exchange().identify() # 'E minor'  (L: Leittonwechsel)
+
+C.transform("LP").identify()         # 'E major'  (apply a sequence)
+C.tonnetz_path(Chord.from_symbol("Am"))   # 'R'    — shortest P/L/R route between triads
+C.tonnetz_path(Chord.from_symbol("Abm"))  # 'PLP'  — the hexatonic pole of C major
+```
+
+### Part-writing checker (parallels / crossing)
+
+`check_voice_leading` flags the common-practice no-no's across a sequence of
+voicings. Each voicing's tones are read low-to-high as the voices (so a
+4-note chord gets bass/tenor/alto/soprano labels):
+
+```python
+from pytheory import Chord, check_voice_leading
+
+a = Chord.from_midi_message(48, 55)        # C3 + G3 (a fifth)
+b = Chord.from_midi_message(50, 57)        # D3 + A3 (a fifth) — both rise
+check_voice_leading([a, b])
+# [{'type': 'parallel fifths', 'chords': (0, 1), 'voices': (0, 1),
+#   'description': 'parallel fifths between voice 1 and voice 2 (chords 0→1)'}]
+```
+
+It catches **parallel fifths**, **parallel octaves**, and **voice
+crossing**; clean part-writing returns `[]`.
+
+### Chord-scale theory (what to solo with)
+
+```python
+from pytheory import Chord, chord_scales, chord_scale_notes, avoid_notes
+
+chord_scales(Chord.from_symbol("G7"))                 # ['mixolydian']
+chord_scales(Chord.from_symbol("Cm7"))                # ['dorian','aeolian','phrygian']
+chord_scales(Chord.from_symbol("Em7"), key="C")       # ['phrygian', …]  diatonic mode first
+[t.name for t in chord_scale_notes(Chord.from_symbol("Cmaj7"))]  # C D E F G A B
+[t.name for t in avoid_notes(Chord.from_symbol("Cmaj7"))]        # ['F']  (½-step above the 3rd)
+```
+
+`chord_scales` ranks scales by fit (quality alone, or the diatonic mode
+first when you pass a `key`); `avoid_notes` flags scale tones a half-step
+above a chord tone.
 
 ```python
 from pytheory.play import play, save
